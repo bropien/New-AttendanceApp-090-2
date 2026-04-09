@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   FlatList,
-  Alert
+  Alert,
+  TextInput
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -22,6 +23,21 @@ export default function App() {
   const [history, setHistory] = useState(initialHistory);
   const [currentTime, setCurrentTime] = useState("");
   const [sudahAbsen, setSudahAbsen] = useState(false);
+  const [note, setNote] = useState("");
+  const noteInputRef = useRef(null);
+
+  // MEMO STATS
+  const AttendanceStats = useMemo(() => {
+    console.log("Menghitung ulang statistik kehadiran");
+
+    const presentCount = history.filter(item => item.status === "Present").length;
+    const absentCount = history.filter(item => item.status === "Absent").length;
+
+    return {
+      totalPresent: presentCount,
+      totalAbsent: absentCount
+    };
+  }, [history]);
 
   // JAM REALTIME
   useEffect(() => {
@@ -33,25 +49,30 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // HITUNG SUMMARY
-  const presentCount = history.filter(h => h.status === "Present").length;
-  const absentCount = history.filter(h => h.status === "Absent").length;
-
   // CHECK IN
   const handleCheckIn = () => {
-    if (sudahAbsen) return;
+    if (sudahAbsen) {
+      Alert.alert("Perhatian", "Anda sudah melakukan check in.");
+      return;
+    }
 
-    const newData = {
+    if (note.trim() === "") {
+      Alert.alert("Peringatan", "Catatan kehadiran wajib diisi.");
+      noteInputRef.current.focus();
+      return;
+    }
+
+    const newAttendance = {
       id: Date.now().toString(),
       course: "Mobile Programming",
-      date: new Date().toISOString().split("T")[0],
+      date: new Date().toLocaleDateString("id-ID"),
       status: "Present"
     };
 
-    setHistory([newData, ...history]);
+    setHistory([newAttendance, ...history]);
     setSudahAbsen(true);
 
-    Alert.alert("Sukses", `Absen pada ${currentTime}`);
+    Alert.alert("Sukses", `Berhasil absen pada ${currentTime}`);
   };
 
   const renderItem = ({ item }) => (
@@ -90,42 +111,60 @@ export default function App() {
             <MaterialIcons name="person" size={40} color="#555" />
           </View>
 
-          <View>
+          <View style={styles.classCard}>
             <Text style={styles.name}>Muhammad Zakky Raihan</Text>
             <Text>NIM : 0320240090</Text>
             <Text>Class : MI-2A</Text>
+
+            {!sudahAbsen && (
+              <TextInput
+                ref={noteInputRef}
+                style={styles.inputCatatan}
+                placeholder="Masukkan catatan (cth: Hadir lab)"
+                value={note}
+                onChangeText={setNote}
+              />
+            )}
+
+            <TouchableOpacity
+              style={[
+                styles.button,
+                sudahAbsen ? styles.buttonDisabled : styles.buttonActive
+              ]}
+              onPress={handleCheckIn}
+              disabled={sudahAbsen}
+            >
+              <Text style={styles.buttonText}>
+                {sudahAbsen ? "SUDAH ABSEN" : "CHECK IN"}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        {/* BUTTON */}
-        <TouchableOpacity
-          style={[
-            styles.button,
-            sudahAbsen ? styles.buttonDisabled : styles.buttonActive
-          ]}
-          onPress={handleCheckIn}
-          disabled={sudahAbsen}
-        >
-          <Text style={styles.buttonText}>
-            {sudahAbsen ? "SUDAH ABSEN" : "CHECK IN"}
-          </Text>
-        </TouchableOpacity>
-
         {/* SUMMARY */}
-        <View style={styles.summary}>
-          <Text style={styles.subtitle}>Attendance Summary</Text>
-          <Text>Present : {presentCount}</Text>
-          <Text>Absent : {absentCount}</Text>
+        <View style={styles.statsCard}>
+          <View style={styles.statBox}>
+            <Text style={styles.statNumber}>{AttendanceStats.totalPresent}</Text>
+            <Text style={styles.statLabel}>Total Present</Text>
+          </View>
+          <View style={styles.statBox}>
+            <Text style={[styles.statNumber, { color: "red" }]}>
+              {AttendanceStats.totalAbsent}
+            </Text>
+            <Text style={styles.statLabel}>Total Absent</Text>
+          </View>
         </View>
 
-        <Text style={styles.subtitle}>Attendance History</Text>
-
-        <FlatList
-          data={history}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          scrollEnabled={false}
-        />
+        {/* HISTORY */}
+        <View style={styles.classCard}>
+          <Text style={styles.subtitle}>Attendance History</Text>
+          <FlatList
+            data={history}
+            keyExtractor={(item) => item.id}
+            renderItem={renderItem}
+            scrollEnabled={false}
+          />
+        </View>
 
       </ScrollView>
     </SafeAreaView>
@@ -258,6 +297,53 @@ const styles = StyleSheet.create({
     color: "red",
     fontWeight: "bold",
     marginLeft: 5
-  }
+  },
+
+  inputCatatan:{
+    borderWidth:1,
+    borderColor:'#ccc',
+    borderRadius:8,
+    padding:10,
+    marginTop:15,
+    backgroundColor:'#fafafa'
+  },
+
+  statsCard:{
+    flexDirection:'row',
+    justifyContent:'space-around',
+    backgroundColor:'white',
+    padding:15,
+    borderRadius:10,
+    marginBottom:20
+  },
+  statBox:{
+    alignItems:'center'
+  },
+
+  statNumber:{
+    fontSize:20,
+    fontWeight:'bold',
+    color:'green',
+  },
+
+  ststLabel:{
+    fontSize:14,
+    color:'gray'
+  },
+  classCard: {
+  flex: 1,
+  backgroundColor: "#fff",
+  padding: 15,
+  borderRadius: 10,
+  shadowColor: "#000",
+  shadowOpacity: 0.05,
+  shadowRadius: 5,
+  elevation: 2
+},
+
+statLabel: {
+  fontSize: 14,
+  color: "gray"
+},
 });
 

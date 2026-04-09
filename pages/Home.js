@@ -1,6 +1,7 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, TouchableOpacity, FlatList, Alert,TextInput } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialIcons } from "@expo/vector-icons";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 
 const history = [
   { id: "1", course: "Mobile Programming", date: "2026-03-01", status: "Present" },
